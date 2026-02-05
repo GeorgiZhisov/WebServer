@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace BuditelWebServer.Server
 {
-    public class Header
+    internal class HeaderCollection
     {
-
     }
 }
