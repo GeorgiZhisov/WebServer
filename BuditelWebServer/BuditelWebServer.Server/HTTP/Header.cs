@@ -15,8 +15,10 @@ namespace BuditelWebServer.Server.HTTP
 		public const string Date = "Date";
 		public const string Location = "Location";
 		public const string Server = "Server";
+		public const string SetCookie = "Set-Cookie";
+		public const string Cookie = "Cookie";
 
-		public Header(string name, string value)
+        public Header(string name, string value)
 		{
 			Guard.AgainstNull(name, nameof(name));
 			Guard.AgainstNull(value, nameof(value));

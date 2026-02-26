@@ -2,40 +2,27 @@
 using BuditelWebServer.Server.HTTP;
 using BuditelWebServer.Server.Responses;
 using BuditelWebServer.Server.Views;
+using System.Text;
+using System.Threading.Tasks;
+using System.Web;
 
 namespace BuditelWebServer.Demo
 {
 	internal class Program
 	{
-
-		private const string DownloadForm = @"<form action='/content' method='POST'>
-   <input type='submit' value ='Download Sites Content' /> 
-</form>";
-
-
 		private static string Filename = "content.txt";
-
-
-
 		static async Task Main(string[] args)
 		{
+			await DownloadSitesAsTextFile(Filename,new string[] {"https://www.aboutyou.com","https://www.facebook.com","https://www.youtube.com"});
 
-			await DownloadSitesAsTextFile(Filename,new string[]
-			{
-				"https://www.aboutyou.com",
-				"https://www.softuni.bg",
-				"https://www.youtube.com",
-				"https://www.frogonaquest.com"
-			});
-			var server = new HttpServer(x =>
-			x.MapGet("/html", new HtmlResponse("<h1 style=\"color:blue;\">Hello from my html response</h1>"))
-			//.MapGet("/", new TextResponse("Hello from my server, now with routing table!!!"))
-			.MapGet("/store", new HtmlResponse(Home.Html))
-			.MapGet("/redirect", new RedirectResponse("https://github.com/"))
-			.MapGet("/login", new HtmlResponse(Form.Html))
-			.MapPost("/login", new TextResponse("",AddFormDataAction))
-			.MapGet("/content", new HtmlResponse(DownloadForm))
-			.MapPost("/content", new TextFileRepsonse(Filename)));
+			var server = new HttpServer(routes =>
+			routes.MapGet("/", new HtmlResponse("<form method='post' action='/HTML'><input name='data'/><button type='submit'>Submit</button></form>"))
+			.MapGet("/redirect", new RedirectResponse("https://www.aboutyou.com"))
+			.MapPost("/HTML", new TextResponse("", AddFormDataAction))
+			.MapGet("/content", new HtmlResponse("<form method='post' action='/content'><button type='submit'>Download Content</button></form>"))
+			.MapGet("/cookies", new HtmlResponse("<form method='post' action='/cookies'><button type='submit'>Show Cookies</button></form>"))
+            .MapPost("/content", new TextFileRepsonse(Filename))
+			);
 			await server.Start();
 		}
 
@@ -50,29 +37,69 @@ namespace BuditelWebServer.Demo
 			}
 		}
 
+		
+
 
 		private static async Task<string> DownloadWebSiteContent(string url)
 		{
 			var client = new HttpClient();
-			var response = await client.GetAsync(url);
-			var html = await response.Content.ReadAsStringAsync();
-			return html;
+
+			using (client)
+			{
+				var response = await client.GetAsync(url);
+				var html = await response.Content.ReadAsStringAsync();
+				return html;
+
+			}
+
 		}
 
 		private static async Task DownloadSitesAsTextFile(string filename, string[] urls)
 		{
 			var downloads = new List<Task<string>>();
 
-			foreach (var url in urls) 
-			{ 
+			foreach (var url in urls)
+			{
 				downloads.Add(DownloadWebSiteContent(url));
 			}
 
 			var responses = await Task.WhenAll(downloads);
 
-			var responsesString = string.Join(Environment.NewLine + new string('-',100),responses);
+			var responsesString = string.Join($"{Environment.NewLine}{new string('-',100)}",responses);
 
 			await File.WriteAllTextAsync(filename, responsesString);
+		}
+
+		private static void AddCookiesAction(Request request, Response response)
+		{
+			
+			if (request.Cookies.Any())
+			{
+				
+				var cookieText = new StringBuilder();
+				cookieText.AppendLine("<h1>Cookies:</h1>");
+
+				cookieText
+	.Append("<table border='1'><tr><th>Name</th><th>Value</th></tr>");
+
+				foreach (var cookie in request.Cookies)
+				{
+					cookieText.Append("<tr>");
+					cookieText
+						.Append($"<td>{HttpUtility.HtmlEncode(cookie.Name)}</td>");
+					cookieText
+						.Append($"<td>{HttpUtility.HtmlEncode(cookie.Value)}</td>");
+					cookieText.Append("</tr>");
+				}
+
+				cookieText.Append("</table>");
+
+				response.Body = cookieText.ToString();
+			}
+			else
+			{
+				response.Body = "<h1>Cookies set!</h1>";
+			}
 		}
 	}
 }

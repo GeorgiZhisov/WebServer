@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web;
@@ -12,20 +13,24 @@ namespace BuditelWebServer.Server.HTTP
 		public Method Method { get; private set; }
 		public string Url { get; private set; }
 		public HeaderCollection Headers { get; private set; } = new HeaderCollection();
-		public string Body { get; private set; }
+
+		public CookieCollection Cookies { get; private set; } = new CookieCollection();
+        public string Body { get; private set; }
 
 		public IReadOnlyDictionary<string,string> FormData { get; private set; }
 
 		public static Request Parse(string request)
 		{
 			
-			var lines = request.Split("\r\n");
+            var lines = request.Split("\r\n");
 			var startLine = lines.First().Split(" ");
 
 			var method = ParseMethod(startLine[0]);
 			var url = startLine[1];
 			var headers = ParseHeaders(lines.Skip(1));
-			var bodyLines = lines.Skip(headers.Count + 2).ToArray();
+			var cookies = ParseCookies(headers);
+
+            var bodyLines = lines.Skip(headers.Count + 2).ToArray();
 
 			var body = string.Join("\r\n", bodyLines);
 
@@ -41,7 +46,26 @@ namespace BuditelWebServer.Server.HTTP
 			};
 		}
 
-		private static Method ParseMethod(string method)
+		private static CookieCollection ParseCookies(HeaderCollection headers)
+		{
+			var cookieCollection = new CookieCollection();
+
+			if (headers.Contains(Header.Cookie))
+			{
+				var cookieHeader = headers[Header.Cookie];
+				var allCookies = cookieHeader.Split(";");
+
+				foreach(var cookie in allCookies)
+				{
+					var cookieParts = cookie.Split("=");
+					cookieCollection.Add(cookieParts[0].Trim(), cookieParts[1].Trim());
+				}
+
+            }
+			return cookieCollection;
+        }
+
+        private static Method ParseMethod(string method)
 		{
 			try
 			{

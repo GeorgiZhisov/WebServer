@@ -17,6 +17,8 @@ namespace BuditelWebServer.Server.HTTP
 
 		public HeaderCollection Headers { get; } = new HeaderCollection();
 
+		public CookieCollection Cookies { get; set; } = new CookieCollection();
+
         public StatusCode StatusCode { get; init; }
         public string Body { get; set; }
 
@@ -34,7 +36,12 @@ namespace BuditelWebServer.Server.HTTP
 			{
 				result.AppendLine(header.ToString());
 			}
-			result.AppendLine();
+
+			foreach (var cookie in Cookies)
+			{
+				result.AppendLine($"{Header.SetCookie}: {cookie}");
+            }
+            result.AppendLine();
 
 			if (string.IsNullOrWhiteSpace(Body) == false)
 			{
